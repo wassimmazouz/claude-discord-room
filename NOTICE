@@ -1,0 +1,2 @@
+channel/server.ts and related files come from anthropics/claude-plugins-official (external_plugins/discord, commit baa09e0), licensed under Apache-2.0.
+Modified 2026-11-05: added channel/agent-gate.ts and changed message handling in channel/server.ts to support several agents in one room.

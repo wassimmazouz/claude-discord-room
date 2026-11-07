@@ -1,0 +1,19 @@
+{
+  "your_user_id": "PASTE_YOUR_DISCORD_USER_ID",
+  "channel_id": "PASTE_THE_CHANNEL_ID",
+  "max_agent_messages_in_a_row": 8,
+  "require_mention": false,
+  "rooms": [],
+  "agents": [
+    {
+      "name": "alpha",
+      "token": "PASTE_ALPHA_BOT_TOKEN",
+      "workdir": "~/room/alpha"
+    },
+    {
+      "name": "beta",
+      "token": "PASTE_BETA_BOT_TOKEN",
+      "workdir": "~/room/beta"
+    }
+  ]
+}
