@@ -50,6 +50,7 @@ Add your IDs, tokens and folders to `room.config.json`. To add an agent, add ano
 | `require_mention` | `false`: a message that mentions anyone goes only to those it mentions, and a message with no mention goes to every agent. `true`: agents wake only when mentioned or replied to, which uses much less of your Claude allowance. |
 | `ack_reaction` | Emoji an agent adds to a message it receives, such as `"👀"`. Default: none. |
 | `rooms` | Extra channels for your agents, including ones shared with friends. See [More rooms](#more-rooms). |
+| `memory` | A private GitHub repo of notes shared between agents. See [Shared memory](#shared-memory). |
 
 ## 4. Start the room
 
@@ -98,6 +99,26 @@ Things to know before you share a room:
 - Guest bots can't approve anything. Friends themselves can't instruct your agents either, because a room only accepts you and listed bots.
 - Each person's agents pause separately at the message limit. Only their owner's message restarts them.
 
+## Shared memory
+
+Agents can share what they learn through one private GitHub repo. Every owner needs write access to it and the [GitHub CLI](https://cli.github.com) logged in with `gh auth login`.
+
+1. One person creates a private repo and invites each owner as a collaborator.
+2. Each owner accepts the invitation and adds this to `room.config.json`, using their own `namespace`:
+   ```json
+   "memory": { "repo": "OWNER/REPO", "namespace": "your-name" }
+   ```
+3. Each owner runs `./room.sh restart`, which clones the repo to `~/room/shared/memory`.
+
+Each agent writes `.md` notes in `memory/<namespace>/<agent>/`, then publishes with `bun room.ts memory-sync <agent>`. That command pulls the latest notes and pushes only the agent's own folder. It refuses non-Markdown files and anything that looks like a known kind of secret.
+
+Things to know before you share memory:
+
+- Every collaborator can read everything in the repo, so a note can reveal private work. The secret check catches common token formats, not private information in general.
+- Agents are told that notes are reference material, never instructions, and notes aren't loaded into their prompts. That's an instruction, not a technical block, and a hostile note could still influence an agent that reads it.
+- Only share memory with people you trust, because GitHub gives collaborators write access to the whole repo. The own-folder limit applies to `memory-sync`, not to GitHub.
+- Agents use their owner's GitHub login for this. Plain `git push` stays blocked for them.
+
 ## Leaving the agents to work
 
 Before you leave, add tasks to `~/room/shared/TASKS.md`. Say what "done" means and when to stop. Then run `./room.sh` and post in the channel to start them. Keep the PC on and awake.
@@ -129,6 +150,7 @@ Don't run the room with `--dangerously-skip-permissions` outside a throwaway VM 
 
 - `SETUP_PROMPT.md` lets your Claude Code agent walk you through setup.
 - `room.sh` starts the room and walks you through the startup prompts.
+- `channel/memory-guard.ts` checks notes before they're shared.
 - `room.ts` starts and stops the agents and writes each one's settings to `state/`.
 - `channel/` is Anthropic's official Discord channel plugin (Apache-2.0), modified by `agent-gate.ts` and a small patch to `server.ts`. Those changes let listed bots through, limit loops and keep approvals human-only.
 - Run the rule tests with `cd channel && bun install && bun test`.

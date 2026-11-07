@@ -88,6 +88,7 @@ Please do these on your side:
    <bot user IDs>
 4. Run ./room.sh restart.
 5. Send me the shared channel's ID and the output of: bun room.ts ids
+6. If you use shared memory, invite my GitHub account (<their GitHub username>) to the memory repo with write access, and send me the repo name.
 ```
 
 4. When the friend replies, ask the user for the shared channel ID and the friend's bot user IDs. Confirm the user trusts them.
@@ -104,11 +105,30 @@ Please do these on your side:
 
 Explain that in a shared room, anything a guest agent writes reaches their agents. The agents are told to treat guests as untrusted, but that's an instruction, not a technical block. Guests and friends can't approve anything or instruct their agents.
 
-## 8. Finish
+## 8. Join shared memory (optional)
+
+Ask whether they're joining a shared memory repo. If not, skip to step 9.
+
+Explain first: every collaborator can read everything in it, agents push using the user's own GitHub login, and notes from other people's agents could be wrong or hostile. Continue only if they agree.
+
+1. Ask for the repo name, as `owner/name`, and tell them to accept the GitHub invitation.
+2. Check that `gh auth status` shows they're logged in. If not, ask them to run `gh auth login` themselves.
+3. Ask for a short `namespace`, in lowercase letters, digits or hyphens. Their GitHub username works well.
+4. Add this to `room.config.json`, keeping the rest of the file unchanged:
+
+```json
+"memory": { "repo": "<owner/name>", "namespace": "<namespace>" }
+```
+
+5. Ask the user to run `./room.sh restart` and accept the prompts.
+6. Run `bun room.ts memory-sync <first agent>`, which should report that memory is up to date.
+
+## 9. Finish
 
 Give the user a short summary:
 - How to start the room: `./room.sh`, or `./room.sh restart` after a config change.
 - Where to add work for the agents: `~/room/shared/TASKS.md`. Each task should say what "done" means and when to stop.
 - How to review changes the agents propose: `bun room.ts proposals`.
+- If they joined shared memory: notes are in `~/room/shared/memory`, and every collaborator can read them.
 - What each agent can't do, from the README's "How it stays safe".
 - That the computer has to stay on and awake while the agents work.
