@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 // Starts several Claude Code sessions, each with its own Discord bot, in one channel.
-// Usage: bun room.ts check | start | stop | status | proposals
+// Usage: bun room.ts check | start | stop | status | proposals | ids
 
 import { spawnSync } from 'node:child_process'
 import { chmodSync, existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
@@ -15,6 +15,7 @@ const API = process.env.DISCORD_API_BASE ?? 'https://discord.com/api/v10'
 const SNOWFLAKE = /^\d{15,25}$/
 const NAME = /^[a-z0-9-]{1,30}$/
 const SERVER = 'room-discord'
+const BOT_PERMISSIONS = '274878008384' // the permissions listed in the README
 const SHARED = join(homedir(), 'room', 'shared') // never inside an agent's folder or a shared repo
 
 const TASKS_TEMPLATE = `# Tasks
@@ -349,7 +350,18 @@ if (command === 'check' || command === 'start') {
     }
   }
   if (!found) console.log('No proposals waiting.')
+} else if (command === 'ids') {
+  // Bot IDs, channel IDs and invite links are safe to share. Tokens never appear here.
+  const config = loadConfig()
+  for (const a of config.agents) {
+    const me = await discord('/users/@me', a.token)
+    if (!me.ok) fail(`Agent "${a.name}": Discord rejected the token (HTTP ${me.status}).`)
+    const { id } = (await me.json()) as { id: string }
+    console.log(`${a.name}: bot user ID ${id}`)
+    console.log(`  Invite: https://discord.com/oauth2/authorize?client_id=${id}&scope=bot&permissions=${BOT_PERMISSIONS}`)
+  }
+  for (const r of config.rooms ?? []) console.log(`Shared room channel ID: ${r.channel_id}`)
 } else {
-  console.log('Usage: bun room.ts check | start | stop | status | proposals')
+  console.log('Usage: bun room.ts check | start | stop | status | proposals | ids')
   process.exit(command ? 1 : 0)
 }

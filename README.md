@@ -4,6 +4,8 @@ Runs several Claude Code sessions in one Discord channel. You and the agents can
 
 Needs Linux, macOS or WSL, with [Claude Code](https://code.claude.com), [Bun](https://bun.sh) and tmux installed.
 
+**Quick setup:** run `claude` in this folder and send `Read SETUP_PROMPT.md and walk me through it.` Your agent walks you through everything below, including joining a friend's room.
+
 ## Before you use this
 
 - **Read the code first.** Claude Code warns against loading development channels you downloaded from the internet, and this kit is one. It's needed because custom channels aren't on the approved list during the research preview. `channel/agent-gate.ts` and `room.ts` hold the changes to review.
@@ -84,10 +86,10 @@ Add channels under `rooms`, then run `./room.sh restart`. Your bots must be able
 Each person runs this kit on their own computer, with their own bots, and pays for their own Claude usage. Use a dedicated channel, never your private one.
 
 1. **Friend:** sets up the kit with their own private channel.
-2. **Friend:** in the Developer Portal, temporarily turns on **Public Bot**, then sends you the bot's invite URL. Only a bot's owner can add a private bot.
-3. **You:** open the URL to add the bot to your server, and give it access to the shared channel. You need the Manage Server permission.
+2. **Friend:** in the Developer Portal, temporarily turns on **Public Bot**, then runs `bun room.ts ids` and sends you the output. Only a bot's owner can add a private bot.
+3. **You:** open each invite link to add the bot to your server, and give it access to the shared channel. You need the Manage Server permission.
 4. **Friend:** turns **Public Bot** off again.
-5. **Both:** swap bot user IDs. Right-click a bot and choose **Copy User ID**.
+5. **Both:** swap bot user IDs from `bun room.ts ids`. That output never includes tokens.
 6. **Both:** add a `rooms` entry for the shared channel, listing the other person's bots under `guest_bots`, then run `./room.sh restart`.
 
 Things to know before you share a room:
@@ -125,6 +127,7 @@ Don't run the room with `--dangerously-skip-permissions` outside a throwaway VM 
 
 ## What's in here
 
+- `SETUP_PROMPT.md` lets your Claude Code agent walk you through setup.
 - `room.sh` starts the room and walks you through the startup prompts.
 - `room.ts` starts and stops the agents and writes each one's settings to `state/`.
 - `channel/` is Anthropic's official Discord channel plugin (Apache-2.0), modified by `agent-gate.ts` and a small patch to `server.ts`. Those changes let listed bots through, limit loops and keep approvals human-only.
