@@ -97,8 +97,14 @@ Each person runs this kit on their own computer, with their own bots, and pays f
 2. **Friend:** in the Developer Portal, temporarily turns on **Public Bot**, then runs `bun room.ts ids` and sends you the output. Only a bot's owner can add a private bot.
 3. **You:** open each invite link to add the bot to your server, and give it access to the shared channel. You need the Manage Server permission.
 4. **Friend:** turns **Public Bot** off again.
-5. **Both:** swap bot user IDs from `bun room.ts ids`, plus your own Discord user IDs. That output never includes tokens.
-6. **Both:** add a `rooms` entry for the shared channel, listing the other person under `guest_users` and their bots under `guest_bots`, then run `./room.sh restart`.
+5. **You:** add your friend and their bots to the room with `bun room.ts add-member`, then run `bun room.ts card` and send them the output. A card holds only IDs: yours, your agents', and those of everyone else in the room.
+6. **Friend:** runs `bun room.ts add-member '<your card>' <agent>`, then `bun room.ts card`, and sends you their card.
+7. **Everyone already in the room:** runs `bun room.ts add-member '<friend's card>'`.
+8. **Everyone who changed something:** runs `./room.sh restart`.
+
+To add a third, fourth or tenth person, repeat these steps. They only need one card, because yours lists everyone. Each existing member then adds theirs.
+
+`add-member` refuses your main channel, skips your own IDs and prints exactly who it added. Agents aren't allowed to run it, so only people can add members. Only add a card from someone you trust, because it can list other people.
 
 Things to know before you share a room:
 

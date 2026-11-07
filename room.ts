@@ -1,12 +1,12 @@
 #!/usr/bin/env bun
 // Starts several Claude Code sessions, each with its own Discord bot, in one channel.
-// Usage: bun room.ts check | start | stop | status | proposals | ids | memory-sync <agent>
+// Usage: bun room.ts check | start | stop | status | proposals | ids | memory-sync <agent> | card [channel] | add-member <card> [agent]
 
 import { spawnSync } from 'node:child_process'
 import { chmodSync, existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join, resolve } from 'node:path'
-import { roomAccess, type Room } from './channel/agent-gate'
+import { addMembers, parseCard, roomAccess, type Room } from './channel/agent-gate'
 import { memoryProblem } from './channel/memory-guard'
 
 const KIT = import.meta.dir
@@ -250,6 +250,54 @@ ${others.length > 0 ? `## Reviewing each other
 ${sharedMemory}${sharedRooms}`
 }
 
+async function botId(a: AgentConfig): Promise<string> {
+  const me = await discord('/users/@me', a.token)
+  if (!me.ok) fail(`Agent "${a.name}": Discord rejected the token (HTTP ${me.status}).`)
+  return ((await me.json()) as { id: string }).id
+}
+
+// Prints everyone you have in a room, so someone joining adds them all at once.
+async function printCard(c: Config, channel: string | undefined) {
+  const rooms = c.rooms ?? []
+  const id = channel ?? (rooms.length === 1 ? rooms[0]!.channel_id : undefined)
+  if (!id) fail('Usage: bun room.ts card <channel_id>')
+  const room = rooms.find(r => r.channel_id === id)
+  if (!room) fail(`Channel ${id} isn't in rooms. Your main channel can't be shared.`)
+  const agents = c.agents.filter(a => channelsOf(c, a).includes(id))
+  const own = await Promise.all(agents.map(botId))
+  console.log(JSON.stringify({
+    room: id,
+    people: [c.your_user_id, ...(room.guest_users ?? [])],
+    bots: [...own, ...(room.guest_bots ?? [])],
+  }))
+}
+
+async function addMember(c: Config, text: string | undefined, agentName: string | undefined) {
+  const card = parseCard(text ?? '')
+  if (!card) fail("Usage: bun room.ts add-member '<card>' [agent]. Get the card from bun room.ts card.")
+  if (card.room === c.channel_id) fail("That's your main channel. Guests can't be added to it.")
+  const own = [c.your_user_id, ...(await Promise.all(c.agents.map(botId)))]
+
+  // Edits the file as stored, because loadConfig expands paths.
+  const stored = JSON.parse(readFileSync(CONFIG_FILE, 'utf8')) as Config
+  const { rooms, people, bots } = addMembers(stored.rooms ?? [], card, own)
+  stored.rooms = rooms
+  if (agentName) {
+    const agent = stored.agents.find(a => a.name === agentName)
+    if (!agent) fail(`There's no agent called "${agentName}".`)
+    if (agent.channels && !agent.channels.includes(card.room)) agent.channels.push(card.room)
+  }
+  writeFileSync(CONFIG_FILE, JSON.stringify(stored, null, 2) + '\n')
+
+  console.log(`Room ${card.room}`)
+  console.log(`  People added: ${people.join(', ') || 'none'}`)
+  console.log(`  Bots added: ${bots.join(', ') || 'none'}`)
+  if (!stored.agents.some(a => channelsOf(stored, a).includes(card.room))) {
+    console.log('• None of your agents are in this room. Run this again with an agent name.')
+  }
+  console.log('Run ./room.sh restart to apply this.')
+}
+
 function git(cwd: string, ...args: string[]): string {
   const r = spawnSync('git', args, { cwd, encoding: 'utf8' })
   if (r.status !== 0) fail(`git ${args[0]} failed in ${cwd}: ${r.stderr}`)
@@ -358,6 +406,7 @@ function writeAgentPermissions(c: Config, a: Agent, agents: Agent[]) {
     ...agents.map(x => `Read(/${x.dir}/.env)`),
     ...agents.flatMap(x => [`Edit(/${x.workdir}/CLAUDE.md)`, `Edit(/${x.workdir}/.claude/**)`]),
     'Bash(git push:*)',
+    `Bash(bun ${KIT}/room.ts add-member:*)`, // only people add members
   ]
   // Agents that share no channel are kept apart, so private work stays out of shared rooms.
   const peers = peersOf(c, a, agents)
@@ -490,6 +539,10 @@ if (command === 'check' || command === 'start') {
     }
   }
   if (!found) console.log('No proposals waiting.')
+} else if (command === 'card') {
+  await printCard(loadConfig(), process.argv[3])
+} else if (command === 'add-member') {
+  await addMember(loadConfig(), process.argv[3], process.argv[4])
 } else if (command === 'memory-sync') {
   syncMemory(loadConfig(), process.argv[3])
 } else if (command === 'ids') {
@@ -504,6 +557,6 @@ if (command === 'check' || command === 'start') {
   }
   for (const r of config.rooms ?? []) console.log(`Shared room channel ID: ${r.channel_id}`)
 } else {
-  console.log('Usage: bun room.ts check | start | stop | status | proposals | ids | memory-sync <agent>')
+  console.log('Usage: bun room.ts check | start | stop | status | proposals | ids | memory-sync <agent> | card [channel] | add-member <card> [agent]')
   process.exit(command ? 1 : 0)
 }

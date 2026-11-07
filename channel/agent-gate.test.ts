@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { BotHopLimiter, canAnswerPermission, canRestartRoom, mustBeMentioned, roomAccess, type Observation } from './agent-gate'
+import { addMembers, BotHopLimiter, canAnswerPermission, canRestartRoom, mustBeMentioned, parseCard, roomAccess, type Observation } from './agent-gate'
 
 const HUMAN = 'human'
 const A = 'bot-a'
@@ -154,6 +154,45 @@ describe('roomAccess', () => {
     expect(canRestartRoom('friend', false, [HUMAN])).toBe(false)
     expect(canRestartRoom(HUMAN, false, [HUMAN])).toBe(true)
     expect(canRestartRoom(B, true, [B])).toBe(false)
+  })
+})
+
+describe('member cards', () => {
+  const ID = (n: number) => String(n).repeat(18)
+  const card = { room: ID(1), people: [ID(2)], bots: [ID(3)] }
+
+  test('reads a valid card', () => {
+    expect(parseCard(JSON.stringify(card))).toEqual(card)
+  })
+
+  test('refuses malformed cards', () => {
+    for (const bad of ['nope', '{}', 'null', JSON.stringify({ ...card, room: 'x' }), JSON.stringify({ ...card, people: ['x'] }), JSON.stringify({ ...card, bots: 'x' })]) {
+      expect(parseCard(bad)).toBeNull()
+    }
+  })
+
+  test('creates a room where members can talk freely', () => {
+    const { rooms, people, bots } = addMembers([], card, [])
+    expect(rooms).toEqual([{ channel_id: ID(1), guest_bots: [ID(3)], guest_users: [ID(2)], hear_everything: true }])
+    expect([people, bots]).toEqual([[ID(2)], [ID(3)]])
+  })
+
+  test('keeps existing settings and members', () => {
+    const before = [{ channel_id: ID(1), guest_bots: [ID(4)], guest_users: [], hear_everything: false }]
+    const { rooms } = addMembers(before, card, [])
+    expect(rooms).toEqual([{ channel_id: ID(1), guest_bots: [ID(4), ID(3)], guest_users: [ID(2)], hear_everything: false }])
+  })
+
+  test('adding the same card twice changes nothing', () => {
+    const first = addMembers([], card, [])
+    const second = addMembers(first.rooms, card, [])
+    expect(second.rooms).toEqual(first.rooms)
+    expect([second.people, second.bots]).toEqual([[], []])
+  })
+
+  test('skips your own IDs', () => {
+    const { people, bots } = addMembers([], card, [ID(2), ID(3)])
+    expect([people, bots]).toEqual([[], []])
   })
 })
 

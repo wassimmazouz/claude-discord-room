@@ -96,6 +96,47 @@ export function roomAccess(
   return { groups, allowBots: [...new Set([...ownBots, ...rooms.flatMap(r => r.guest_bots ?? [])])] }
 }
 
+export type MemberCard = { room: string; people: string[]; bots: string[] }
+
+const DISCORD_ID = /^\d{15,25}$/
+
+/** Reads a card from bun room.ts card. Returns null unless it's well formed. */
+export function parseCard(text: string): MemberCard | null {
+  let card: Partial<MemberCard>
+  try {
+    card = JSON.parse(text)
+  } catch {
+    return null
+  }
+  const ids = (v: unknown) => Array.isArray(v) && v.every(id => typeof id === 'string' && DISCORD_ID.test(id))
+  if (typeof card?.room !== 'string' || !DISCORD_ID.test(card.room)) return null
+  if (!ids(card.people) || !ids(card.bots)) return null
+  return { room: card.room, people: card.people!, bots: card.bots! }
+}
+
+/**
+ * Adds a card's members to a room, creating it if needed. New rooms hear everything,
+ * so members can talk like regular users. Your own IDs are skipped.
+ */
+export function addMembers(rooms: Room[], card: MemberCard, ownIds: string[]) {
+  const existing = rooms.find(r => r.channel_id === card.room)
+  const room: Room = existing ?? { channel_id: card.room, guest_bots: [], guest_users: [], hear_everything: true }
+  const fresh = (ids: string[], known: string[] = []) =>
+    [...new Set(ids)].filter(id => !ownIds.includes(id) && !known.includes(id))
+  const people = fresh(card.people, room.guest_users)
+  const bots = fresh(card.bots, room.guest_bots)
+  const updated = {
+    ...room,
+    guest_users: [...(room.guest_users ?? []), ...people],
+    guest_bots: [...(room.guest_bots ?? []), ...bots],
+  }
+  return {
+    rooms: existing ? rooms.map(r => (r === existing ? updated : r)) : [...rooms, updated],
+    people,
+    bots,
+  }
+}
+
 /** Only the owner can restart a paused room, so a guest can't keep agents running on their allowance. */
 export function canRestartRoom(authorId: string, authorIsBot: boolean, ownerAllowFrom: string[]): boolean {
   return !authorIsBot && ownerAllowFrom.includes(authorId)
