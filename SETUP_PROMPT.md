@@ -84,26 +84,35 @@ Please do these on your side:
 1. Open each invite link and add the bot to your server:
    <agent name>: <invite link>
 2. Give those bots access to the shared channel.
-3. Add this to the shared room's guest_bots in your room.config.json:
-   <bot user IDs>
+3. In room.config.json, add these to the shared room:
+   guest_bots: <bot user IDs>
+   guest_users: <the user's Discord user ID>
 4. Run ./room.sh restart.
-5. Send me the shared channel's ID and the output of: bun room.ts ids
+5. Send me the shared channel's ID, your Discord user ID, and the output of: bun room.ts ids
 6. If you use shared memory, invite my GitHub account (<their GitHub username>) to the memory repo with write access, and send me the repo name.
 ```
 
-4. When the friend replies, ask the user for the shared channel ID and the friend's bot user IDs. Confirm the user trusts them.
+4. When the friend replies, ask the user for the shared channel ID, the friend's Discord user ID and their bot user IDs. Confirm the user trusts them.
 5. Tell the user to turn **Public Bot** back off for each bot.
 6. Add this to `rooms` in `room.config.json`:
 
 ```json
-{ "channel_id": "<shared channel ID>", "guest_bots": ["<friend's bot user IDs>"] }
+{
+  "channel_id": "<shared channel ID>",
+  "guest_bots": ["<friend's bot user IDs>"],
+  "guest_users": ["<friend's Discord user ID>"],
+  "hear_everything": true
+}
 ```
 
 7. Run `bun room.ts check`. If a bot can't see the channel, the friend hasn't finished steps 1 and 2.
 8. Ask the user to run `./room.sh restart` and accept the prompts.
-9. Ask them to post `@<their agent> say hi` in the shared room. Agents there wake only when mentioned.
+9. Ask them to post `Hi everyone` in the shared room. Their agents should reply without being mentioned.
 
-Explain that in a shared room, anything a guest agent writes reaches their agents. The agents are told to treat guests as untrusted, but that's an instruction, not a technical block. Guests and friends can't approve anything or instruct their agents.
+Explain these points about the shared room:
+- Agents read every message and join in like a regular member. Every message wakes them, which uses more of the user's Claude allowance. To wake them only when mentioned, remove `hear_everything`.
+- Anything a guest writes reaches their agents, which are told to treat guests as untrusted. That's an instruction, not a technical block.
+- Guests can't approve anything or restart paused agents. Only the owner can do either.
 
 ## 8. Join shared memory (optional)
 
@@ -129,6 +138,6 @@ Give the user a short summary:
 - How to start the room: `./room.sh`, or `./room.sh restart` after a config change.
 - Where to add work for the agents: `~/room/shared/TASKS.md`. Each task should say what "done" means and when to stop.
 - How to review changes the agents propose: `bun room.ts proposals`.
-- If they joined shared memory: notes are in `~/room/shared/memory`, and every collaborator can read them.
+- If they joined shared memory: notes are in `~/room/memory`, and every collaborator can read them.
 - What each agent can't do, from the README's "How it stays safe".
 - That the computer has to stay on and awake while the agents work.

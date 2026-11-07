@@ -46,12 +46,15 @@ export class BotHopLimiter {
 /**
  * A message that mentions anyone goes only to those it mentions, so a mention
  * of someone else must not wake this agent. With no mentions, requireMention decides.
+ * In a hearEverything room the agent receives every message from allowed senders.
  */
 export function mustBeMentioned(
   requireMention: boolean,
   userMentions: number,
   roleMentions: number,
+  hearEverything = false,
 ): boolean {
+  if (hearEverything) return false
   return requireMention || userMentions > 0 || roleMentions > 0
 }
 
@@ -59,6 +62,10 @@ export type Room = {
   channel_id: string
   /** Other people's bots, allowed in this room only. */
   guest_bots?: string[]
+  /** Other people, allowed in this room only. They can talk to agents but never instruct them. */
+  guest_users?: string[]
+  /** Receive every message from allowed senders, even ones that mention someone else. */
+  hear_everything?: boolean
   /** Defaults to true, so guests only wake an agent by mentioning it. */
   require_mention?: boolean
 }
@@ -71,20 +78,27 @@ export type Room = {
 export function roomAccess(
   owner: string,
   ownBots: string[],
-  mainChannel: string,
+  mainChannel: string | null,
   mainRequireMention: boolean,
   rooms: Room[],
 ) {
-  const groups: Record<string, { requireMention: boolean; allowFrom: string[] }> = {
-    [mainChannel]: { requireMention: mainRequireMention, allowFrom: [owner, ...ownBots] },
+  const groups: Record<string, { requireMention: boolean; hearEverything: boolean; allowFrom: string[] }> = {}
+  if (mainChannel) {
+    groups[mainChannel] = { requireMention: mainRequireMention, hearEverything: false, allowFrom: [owner, ...ownBots] }
   }
   for (const r of rooms) {
     groups[r.channel_id] = {
-      requireMention: r.require_mention ?? true,
-      allowFrom: [owner, ...ownBots, ...(r.guest_bots ?? [])],
+      requireMention: !r.hear_everything && (r.require_mention ?? true),
+      hearEverything: r.hear_everything ?? false,
+      allowFrom: [owner, ...ownBots, ...(r.guest_bots ?? []), ...(r.guest_users ?? [])],
     }
   }
   return { groups, allowBots: [...new Set([...ownBots, ...rooms.flatMap(r => r.guest_bots ?? [])])] }
+}
+
+/** Only the owner can restart a paused room, so a guest can't keep agents running on their allowance. */
+export function canRestartRoom(authorId: string, authorIsBot: boolean, ownerAllowFrom: string[]): boolean {
+  return !authorIsBot && ownerAllowFrom.includes(authorId)
 }
 
 /** Only a human on the top-level allowlist may answer a permission prompt. */

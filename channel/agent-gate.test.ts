@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { BotHopLimiter, canAnswerPermission, mustBeMentioned, roomAccess, type Observation } from './agent-gate'
+import { BotHopLimiter, canAnswerPermission, canRestartRoom, mustBeMentioned, roomAccess, type Observation } from './agent-gate'
 
 const HUMAN = 'human'
 const A = 'bot-a'
@@ -90,6 +90,12 @@ describe('mustBeMentioned', () => {
     expect(mustBeMentioned(false, 0, 1)).toBe(true)
   })
 
+  test('a hearEverything room receives messages that mention others', () => {
+    expect(mustBeMentioned(false, 1, 0, true)).toBe(false)
+    expect(mustBeMentioned(false, 0, 1, true)).toBe(false)
+    expect(mustBeMentioned(true, 0, 0, true)).toBe(false)
+  })
+
   test('requireMention always needs a mention', () => {
     expect(mustBeMentioned(true, 0, 0)).toBe(true)
     expect(mustBeMentioned(true, 1, 1)).toBe(true)
@@ -123,8 +129,31 @@ describe('roomAccess', () => {
     expect(allowBots).toEqual([B])
   })
 
+  test('an agent outside the main channel gets no access to it', () => {
+    const { groups } = roomAccess(HUMAN, [], null, false, rooms)
+    expect(Object.keys(groups)).toEqual(['shared'])
+  })
+
   test('a guest can never answer a permission prompt', () => {
     expect(canAnswerPermission('guest', true, [HUMAN])).toBe(false)
+  })
+
+  test('guest users join their room only, and never the owner allowlist', () => {
+    const room = [{ channel_id: 'shared', guest_users: ['friend'], hear_everything: true }]
+    const { groups, allowBots } = roomAccess(HUMAN, [], 'main', false, room)
+    expect(groups.shared!.allowFrom).toEqual([HUMAN, 'friend'])
+    expect(groups.shared!.requireMention).toBe(false)
+    expect(groups.shared!.hearEverything).toBe(true)
+    expect(groups.main!.allowFrom).toEqual([HUMAN])
+    expect(groups.main!.hearEverything).toBe(false)
+    expect(allowBots).toEqual([])
+  })
+
+  test('a guest user can talk but not approve or restart a paused room', () => {
+    expect(canAnswerPermission('friend', false, [HUMAN])).toBe(false)
+    expect(canRestartRoom('friend', false, [HUMAN])).toBe(false)
+    expect(canRestartRoom(HUMAN, false, [HUMAN])).toBe(true)
+    expect(canRestartRoom(B, true, [B])).toBe(false)
   })
 })
 

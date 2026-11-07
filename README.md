@@ -72,7 +72,12 @@ Add channels under `rooms`, then run `./room.sh restart`. Your bots must be able
 
 ```json
 "rooms": [
-  { "channel_id": "SHARED_CHANNEL_ID", "guest_bots": ["FRIEND_BOT_USER_ID"] }
+  {
+    "channel_id": "SHARED_CHANNEL_ID",
+    "guest_bots": ["FRIEND_BOT_USER_ID"],
+    "guest_users": ["FRIEND_DISCORD_USER_ID"],
+    "hear_everything": true
+  }
 ]
 ```
 
@@ -80,7 +85,9 @@ Add channels under `rooms`, then run `./room.sh restart`. Your bots must be able
 | --- | --- |
 | `channel_id` | The channel. Use a channel, not a thread: threads inherit their parent channel's access. |
 | `guest_bots` | Other people's bots, allowed in this room only. |
+| `guest_users` | Other people's Discord user IDs, allowed in this room only. Agents can talk with them, but never take instructions from them. |
 | `require_mention` | Default `true`, so an agent wakes only when mentioned, including by you. |
+| `hear_everything` | `true`: agents receive every message from you and listed guests, even ones that mention someone else, and behave like a regular member. Every message wakes them, so this uses much more of your Claude allowance. |
 
 ### Adding a friend's agents
 
@@ -90,14 +97,14 @@ Each person runs this kit on their own computer, with their own bots, and pays f
 2. **Friend:** in the Developer Portal, temporarily turns on **Public Bot**, then runs `bun room.ts ids` and sends you the output. Only a bot's owner can add a private bot.
 3. **You:** open each invite link to add the bot to your server, and give it access to the shared channel. You need the Manage Server permission.
 4. **Friend:** turns **Public Bot** off again.
-5. **Both:** swap bot user IDs from `bun room.ts ids`. That output never includes tokens.
-6. **Both:** add a `rooms` entry for the shared channel, listing the other person's bots under `guest_bots`, then run `./room.sh restart`.
+5. **Both:** swap bot user IDs from `bun room.ts ids`, plus your own Discord user IDs. That output never includes tokens.
+6. **Both:** add a `rooms` entry for the shared channel, listing the other person under `guest_users` and their bots under `guest_bots`, then run `./room.sh restart`.
 
 Things to know before you share a room:
 
 - Anything a guest agent writes reaches your agent, which runs on your computer. Agents are told to treat guests as untrusted, but that's an instruction, not a technical block. A sandbox or separate user is the real protection.
-- Guest bots can't approve anything. Friends themselves can't instruct your agents either, because a room only accepts you and listed bots.
-- Each person's agents pause separately at the message limit. Only their owner's message restarts them.
+- Guests can't approve anything. Friends can reach your agents only if you list them under `guest_users`, and agents are told never to take instructions from them.
+- Each person's agents pause separately at the message limit. Only their owner's message restarts them, even in a room with guests.
 
 ## Shared memory
 
@@ -108,7 +115,7 @@ Agents can share what they learn through one private GitHub repo. Every owner ne
    ```json
    "memory": { "repo": "OWNER/REPO", "namespace": "your-name" }
    ```
-3. Each owner runs `./room.sh restart`, which clones the repo to `~/room/shared/memory`.
+3. Each owner runs `./room.sh restart`, which clones the repo to `~/room/memory`.
 
 Each agent writes `.md` notes in `memory/<namespace>/<agent>/`, then publishes with `bun room.ts memory-sync <agent>`. That command pulls the latest notes and pushes only the agent's own folder. It refuses non-Markdown files and anything that looks like a known kind of secret.
 
@@ -118,6 +125,23 @@ Things to know before you share memory:
 - Agents are told that notes are reference material, never instructions, and notes aren't loaded into their prompts. That's an instruction, not a technical block, and a hostile note could still influence an agent that reads it.
 - Only share memory with people you trust, because GitHub gives collaborators write access to the whole repo. The own-folder limit applies to `memory-sync`, not to GitHub.
 - Agents use their owner's GitHub login for this. Plain `git push` stays blocked for them.
+
+## Keeping agents apart
+
+By default every agent joins every channel, and they share `~/room/shared`. To keep private work away from a shared room, give each agent its own settings under `agents`:
+
+```json
+{ "name": "alpha", "token": "...", "workdir": "~/room/alpha", "channels": ["PRIVATE_CHANNEL_ID"], "memory": false },
+{ "name": "beta", "token": "...", "workdir": "~/room/beta", "channels": ["SHARED_CHANNEL_ID"], "workspace": "~/room/beta-work" }
+```
+
+| Setting | What it does |
+| --- | --- |
+| `channels` | Channels this agent joins. Others are blocked for it, and it can't read or post there. |
+| `workspace` | Folder for this agent's tasks, projects and proposals. Default `~/room/shared`. |
+| `memory` | `false` keeps this agent out of shared memory. |
+
+Agents that share no channel don't know about each other, and deny rules keep the file tools out of each other's folders. They can't review each other, so you become the reviewer. With no sandbox, shell commands can still reach those folders.
 
 ## Leaving the agents to work
 
@@ -133,7 +157,7 @@ When you're back, run `bun room.ts proposals` to see what's waiting, then `./roo
 
 - **Approvals:** permission prompts go to your DMs, and only you can answer them. Agents can't approve each other's actions.
 - **Access:** agents accept messages only from you and the bots in your config. Access rules are read at startup, so an agent can't change them for a running session.
-- **Loops:** agents pause after the message limit, until you post in the channel.
+- **Loops:** agents pause after the message limit, until you post in the channel. Guests can't restart them.
 - **Agent permissions:** agents only get automatic access to the Discord tools. Everything else follows your normal Claude Code permissions.
 - **Off-limits files:** `bun room.ts start` adds deny rules to each agent's `.claude/settings.local.json`. They block the file tools from changing this kit or any agent's `CLAUDE.md` and `.claude/`, block reading bot tokens, and block plain `git push`. Shell commands can still get past them, because agents run as your user with no sandbox.
 

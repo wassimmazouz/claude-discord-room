@@ -34,7 +34,7 @@ import { readFileSync, writeFileSync, mkdirSync, readdirSync, rmSync, statSync, 
 import { homedir } from 'os'
 import { join, sep } from 'path'
 
-import { BotHopLimiter, canAnswerPermission, mustBeMentioned } from './agent-gate'
+import { BotHopLimiter, canAnswerPermission, canRestartRoom, mustBeMentioned } from './agent-gate'
 
 const STATE_DIR = process.env.DISCORD_STATE_DIR ?? join(homedir(), '.claude', 'channels', 'discord')
 const ACCESS_FILE = join(STATE_DIR, 'access.json')
@@ -101,6 +101,7 @@ type PendingEntry = {
 
 type GroupPolicy = {
   requireMention: boolean
+  hearEverything?: boolean
   allowFrom: string[]
 }
 
@@ -295,7 +296,7 @@ async function gate(msg: Message): Promise<GateResult> {
   if (groupAllowFrom.length > 0 && !groupAllowFrom.includes(senderId)) {
     return { action: 'drop' }
   }
-  const mentionRequired = mustBeMentioned(requireMention, msg.mentions.users.size, msg.mentions.roles.size)
+  const mentionRequired = mustBeMentioned(requireMention, msg.mentions.users.size, msg.mentions.roles.size, policy.hearEverything)
   if (mentionRequired && !(await isMentioned(msg, access.mentionPatterns))) {
     return { action: 'drop' }
   }
@@ -814,10 +815,7 @@ client.on('interactionCreate', async (interaction: Interaction) => {
 const hopLimiter = new BotHopLimiter()
 
 function isTrustedHuman(msg: Message, access: Access): boolean {
-  if (msg.author.bot) return false
-  if (msg.channel.type === ChannelType.DM) return access.allowFrom.includes(msg.author.id)
-  const key = msg.channel.isThread() ? msg.channel.parentId ?? msg.channelId : msg.channelId
-  return access.groups[key]?.allowFrom?.includes(msg.author.id) ?? false
+  return canRestartRoom(msg.author.id, msg.author.bot, access.allowFrom)
 }
 
 client.on('messageCreate', msg => {
