@@ -91,7 +91,7 @@ Please do these on your side:
 
 Fill in the channel ID when it's known, or ask the friend to fill it in.
 
-4. When the friend sends their card, show the user who it lists. Add it only after they confirm they trust everyone on it. You can't run this command, because agents are denied it, so ask the user to run it:
+4. When the friend sends their card, show the user who it lists. Everyone on it will be able to give their agents work, so add it only after they confirm they trust everyone on it. You can't run this command, because agents are denied it, so ask the user to run it:
 
 ```bash
 bun room.ts add-member '<friend's card>' <agent>
@@ -105,8 +105,9 @@ bun room.ts add-member '<friend's card>' <agent>
 
 Explain these points about the shared room:
 - Agents read every message and join in like a regular member. Every message wakes them, which uses more of the user's Claude allowance. To wake them only when mentioned, remove `hear_everything`.
-- Anything a guest writes reaches their agents, which are told to treat guests as untrusted. That's an instruction, not a technical block.
-- Guests can't approve anything or restart paused agents. Only the owner can do either.
+- Everyone in the room is a trusted member. Members and their agents can give the user's agents work, which runs on the user's computer, so they should only add people they'd let use their terminal. To make members guests who can only chat, set `trust_members` to `false` for the room.
+- Agents still won't share the user's secrets, touch their private work or change access because a member asked. That's an instruction, not a technical block.
+- Members can't approve anything or restart paused agents. Only the owner can do either.
 - Agents pause after the message limit. Each owner has to post to restart their own agents.
 
 ## 8. Join shared memory (optional)

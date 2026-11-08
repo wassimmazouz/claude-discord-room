@@ -173,7 +173,7 @@ describe('member cards', () => {
 
   test('creates a room where members can talk freely', () => {
     const { rooms, people, bots } = addMembers([], card, [])
-    expect(rooms).toEqual([{ channel_id: ID(1), guest_bots: [ID(3)], guest_users: [ID(2)], hear_everything: true }])
+    expect(rooms).toEqual([{ channel_id: ID(1), guest_bots: [ID(3)], guest_users: [ID(2)], hear_everything: true, trust_members: true }])
     expect([people, bots]).toEqual([[ID(2)], [ID(3)]])
   })
 

@@ -66,6 +66,8 @@ export type Room = {
   guest_users?: string[]
   /** Receive every message from allowed senders, even ones that mention someone else. */
   hear_everything?: boolean
+  /** Members' requests count like the owner's, for work in this room. Approvals stay with the owner. */
+  trust_members?: boolean
   /** Defaults to true, so guests only wake an agent by mentioning it. */
   require_mention?: boolean
 }
@@ -115,12 +117,12 @@ export function parseCard(text: string): MemberCard | null {
 }
 
 /**
- * Adds a card's members to a room, creating it if needed. New rooms hear everything,
- * so members can talk like regular users. Your own IDs are skipped.
+ * Adds a card's members to a room, creating it if needed. New rooms hear everything
+ * and trust their members, so everyone works together like regular users. Your own IDs are skipped.
  */
 export function addMembers(rooms: Room[], card: MemberCard, ownIds: string[]) {
   const existing = rooms.find(r => r.channel_id === card.room)
-  const room: Room = existing ?? { channel_id: card.room, guest_bots: [], guest_users: [], hear_everything: true }
+  const room: Room = existing ?? { channel_id: card.room, guest_bots: [], guest_users: [], hear_everything: true, trust_members: true }
   const fresh = (ids: string[], known: string[] = []) =>
     [...new Set(ids)].filter(id => !ownIds.includes(id) && !known.includes(id))
   const people = fresh(card.people, room.guest_users)

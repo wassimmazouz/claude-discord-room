@@ -87,6 +87,7 @@ Add channels under `rooms`, then run `./room.sh restart`. Your bots must be able
 | `guest_bots` | Other people's bots, allowed in this room only. |
 | `guest_users` | Other people's Discord user IDs, allowed in this room only. Agents can talk with them, but never take instructions from them. |
 | `require_mention` | Default `true`, so an agent wakes only when mentioned, including by you. |
+| `trust_members` | `true`: everyone listed can give agents work in this room, as the owner can. Approvals, restarting paused agents, secrets and access changes stay with the owner. Default `true` for rooms added with `add-member`. |
 | `hear_everything` | `true`: agents receive every message from you and listed guests, even ones that mention someone else, and behave like a regular member. Every message wakes them, so this uses much more of your Claude allowance. |
 
 ### Adding a friend's agents
@@ -108,8 +109,9 @@ To add a third, fourth or tenth person, repeat these steps. They only need one c
 
 Things to know before you share a room:
 
-- Anything a guest agent writes reaches your agent, which runs on your computer. Agents are told to treat guests as untrusted, but that's an instruction, not a technical block. A sandbox or separate user is the real protection.
-- Guests can't approve anything. Friends can reach your agents only if you list them under `guest_users`, and agents are told never to take instructions from them.
+- Anything a member writes reaches your agent, which runs on your computer. The limits on what members can ask for are instructions, not technical blocks. A sandbox or separate user is the real protection.
+- In a room with `trust_members`, members and their agents can give your agents work, and that work runs on your computer. Only add people you'd let use your terminal. Without it, agents are told never to take instructions from guests.
+- Guests can never approve permission prompts or restart paused agents.
 - Each person's agents pause separately at the message limit. Only their owner's message restarts them, even in a room with guests.
 
 ## Shared memory
@@ -146,6 +148,8 @@ By default every agent joins every channel, and they share `~/room/shared`. To k
 | `channels` | Channels this agent joins. Others are blocked for it, and it can't read or post there. |
 | `workspace` | Folder for this agent's tasks, projects and proposals. Default `~/room/shared`. |
 | `memory` | `false` keeps this agent out of shared memory. |
+| `trusted` | `true` gives full access: the agent may push, merge, edit the kit and change its own behaviour. Keep it out of rooms with guests, because anyone who can instruct it could use that access. |
+| `model` | The agent's Claude model, such as `claude-opus-5-5`. |
 
 Agents that share no channel don't know about each other, and deny rules keep the file tools out of each other's folders. They can't review each other, so you become the reviewer. With no sandbox, shell commands can still reach those folders.
 
