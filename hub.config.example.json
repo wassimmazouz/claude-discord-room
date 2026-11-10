@@ -1,0 +1,16 @@
+{
+  "bot_token_file": "state/hub/bot-token",
+  "owners": ["PASTE_YOUR_DISCORD_USER_ID"],
+  "socket": "state/hub/hub.sock",
+  "secrets_dir": "state/hub/secrets",
+  "inbox_dir": "state/hub/inbox",
+  "ledger_file": "state/hub/ledger.txt",
+  "max_hops": 30,
+  "channels": [
+    { "channel_id": "PASTE_THE_CHANNEL_ID", "webhook_file": "state/hub/webhook-main.json" }
+  ],
+  "agents": [
+    { "name": "cto", "display_name": "CTO", "model": "sonnet", "role": "Engineering, quality and security." },
+    { "name": "coo", "display_name": "COO", "model": "sonnet", "role": "Planning and operations." }
+  ]
+}

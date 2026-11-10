@@ -1,3 +1,5 @@
 room.config.json
 state/
 node_modules/
+hub.config.json
+channel/node_modules

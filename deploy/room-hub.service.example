@@ -1,0 +1,15 @@
+[Unit]
+Description=Room hub: one Discord bot carrying several agents
+After=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+# The sessions live in tmux, so they must outlive this start command.
+KillMode=none
+WorkingDirectory=%h/claude-discord-room
+ExecStart=/bin/bash -lc 'bun hub-room.ts start'
+ExecStop=/bin/bash -lc 'bun hub-room.ts stop'
+
+[Install]
+WantedBy=default.target

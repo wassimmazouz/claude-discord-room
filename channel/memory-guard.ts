@@ -10,15 +10,21 @@ const SECRET_PATTERNS: [RegExp, string][] = [
   [/\bAKIA[0-9A-Z]{16}\b/, 'an AWS key'],
   [/\bxox[abprs]-[A-Za-z0-9-]{10,}/, 'a Slack token'],
   [/-----BEGIN [A-Z ]*PRIVATE KEY-----/, 'a private key'],
+  [/discord(?:app)?\.com\/api\/webhooks\/\d+\/[A-Za-z0-9_-]{20,}/, 'a Discord webhook URL'],
 ]
+
+/** Why `text` looks like it holds a secret, or null. Never includes the secret itself. */
+export function secretIn(text: string, knownSecrets: readonly string[]): string | null {
+  if (knownSecrets.some(s => s && text.includes(s))) return 'it contains one of your bot tokens or room secrets'
+  for (const [pattern, label] of SECRET_PATTERNS) {
+    if (pattern.test(text)) return `it looks like it contains ${label}`
+  }
+  return null
+}
 
 /** Returns why this file can't be shared, or null if it can. Never includes the file's content. */
 export function memoryProblem(path: string, text: string, knownSecrets: string[]): string | null {
   if (!path.endsWith('.md')) return 'only .md files can be shared'
   if (text.length > MAX_BYTES) return 'it is larger than 100 KB'
-  if (knownSecrets.some(s => s && text.includes(s))) return 'it contains one of your bot tokens'
-  for (const [pattern, label] of SECRET_PATTERNS) {
-    if (pattern.test(text)) return `it looks like it contains ${label}`
-  }
-  return null
+  return secretIn(text, knownSecrets)
 }

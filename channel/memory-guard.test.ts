@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { memoryProblem } from './memory-guard'
+import { memoryProblem, secretIn } from './memory-guard'
 
 describe('memoryProblem', () => {
   test('allows ordinary notes', () => {
@@ -37,5 +37,18 @@ describe('memoryProblem', () => {
 
   test('never repeats the secret in its message', () => {
     expect(memoryProblem('a.md', 'value abc123', ['abc123'])).not.toContain('abc123')
+  })
+})
+
+describe('secretIn', () => {
+  test('passes ordinary text', () => {
+    expect(secretIn('Shipped the fix, tests pass.', ['abc123'])).toBeNull()
+  })
+  test('catches a known secret and a webhook URL', () => {
+    expect(secretIn('here: abc123', ['abc123'])).toContain('room secrets')
+    expect(secretIn('https://discord.com/api/webhooks/123456789/' + 'x'.repeat(40), [])).toContain('webhook URL')
+  })
+  test('ignores empty known secrets', () => {
+    expect(secretIn('anything', [''])).toBeNull()
   })
 })
